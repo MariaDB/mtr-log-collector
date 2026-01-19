@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "mtr-junit-collector"
+name = "mtr-log-collector"
 version = "0.1.0"
 description = "Drop-in replacement service for the deprecated Buildbot MTRLogObserver"
 authors = ["Razvan-Liviu Varzaru"]

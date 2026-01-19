@@ -1,20 +1,21 @@
 import pytest
 from fastapi import HTTPException
 
-from app.utils import extract_failures, parse_junit_xml
-
+from app.utils import XMLTestFailureCollection
 
 def test_parse_junit_xml_valid():
     xml_str = """<testsuites><testsuite name="suite"><testcase classname="class" name="test" /></testsuite></testsuites>"""
-    xml = parse_junit_xml(xml_str)
-    assert len(xml) == 1
+    collection = XMLTestFailureCollection()
+    collection.parse(xml_str)
+    assert len(collection.data) == 1
 
 
 def test_extract_failures_returns_empty_for_no_failures():
     xml_str = """<testsuites><testsuite name="suite"><testcase classname="class" name="test" /></testsuite></testsuites>"""
-    xml = parse_junit_xml(xml_str)
-    failures = extract_failures(test_run_id=1, junit_xml=xml)
-    assert failures == []
+    collection = XMLTestFailureCollection()
+    collection.parse(xml_str)
+    collection.extract_failures(test_run_id=1)
+    assert collection.failures == []
 
 
 def test_extract_failures_returns_failures_for_failed_tests():
@@ -30,8 +31,10 @@ def test_extract_failures_returns_failures_for_failed_tests():
       </testsuite>
     </testsuites>
     """
-    xml = parse_junit_xml(xml_str)
-    failures = extract_failures(test_run_id=1, junit_xml=xml)
+    collection = XMLTestFailureCollection()
+    collection.parse(xml_str)
+    collection.extract_failures(test_run_id=1)
+    failures = collection.failures
 
     assert len(failures) == 2
 
@@ -50,8 +53,10 @@ def test_extract_failures_returns_failures_for_failed_tests():
 def test_parse_junit_xml_invalid():
     invalid_xml_str = "<testsuites><testsuite><testcase></testsuite>"  # malformed XML
 
+    collection = XMLTestFailureCollection()
+
     with pytest.raises(HTTPException) as exc_info:
-        parse_junit_xml(invalid_xml_str)
+        collection.parse(invalid_xml_str)
 
     assert exc_info.value.status_code == 400
     assert "Invalid JUnit XML format" in exc_info.value.detail

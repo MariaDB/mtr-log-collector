@@ -1,12 +1,15 @@
 import logging
 
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlmodel import Session
 
 from app.database import get_session
-from app.utils import extract_failures, insert_test_run, parse_junit_xml
+from app.utils import (
+    LogTestFailureCollection,
+    XMLTestFailureCollection,
+    insert_test_run,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,14 +40,18 @@ async def upload_test_results(
     file: UploadFile = Form(...),
     session: Session = Depends(get_session),
 ):
-    if not file.filename.endswith(".xml"):
+    content_type = file.content_type
+    if content_type == "application/xml":
+        collection = XMLTestFailureCollection()
+    elif content_type == "text/plain":
+        collection = LogTestFailureCollection()
+    else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .xml files are supported",
+            detail=f"Unsupported file content type: {content_type}",
         )
-
     content = await file.read()
-    junit_xml = parse_junit_xml(content.decode("utf-8"))
+    collection.parse(content.decode("utf-8"))
     test_run = insert_test_run(
         session,
         branch=branch,
@@ -53,10 +60,10 @@ async def upload_test_results(
         bbnum=bbnum,
         typ=typ,
     )
-    failures = extract_failures(test_run.id, junit_xml)
-    if failures:
+    collection.extract_failures(test_run.id)
+    if collection.failures:
         try:
-            session.add_all(failures)
+            session.add_all(collection.failures)
             session.commit()
             logger.info(f"Stored test results for {platform}:{bbnum}")
             return {"detail": f"Results were stored successfully."}

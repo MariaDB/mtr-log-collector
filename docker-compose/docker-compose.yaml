@@ -1,11 +1,11 @@
 
 ---
 services:
-  mtr-junit-collector:
-    image: ghcr.io/mariadb/mtr-junit-collector:main
+  mtr-log-collector:
+    image: ghcr.io/mariadb/mtr-log-collector:main
     restart: unless-stopped
-    container_name: mtr-junit-collector
-    hostname: mtr-junit-collector
+    container_name: mtr-log-collector
+    hostname: mtr-log-collector
     environment:
       - DATABASE_URL
       - GUNICORN_WORKERS
@@ -22,5 +22,5 @@ services:
     logging:
       driver: journald
       options:
-        tag: "bb-mtr-junit-collector"
+        tag: "bb-mtr-log-collector"
 
