@@ -51,7 +51,7 @@ async def upload_test_results(
             detail=f"Unsupported file content type: {content_type}",
         )
     content = await file.read()
-    collection.parse(content.decode("utf-8"))
+    collection.parse(content.decode("utf-8", errors="replace"))
     test_run = insert_test_run(
         session,
         branch=branch,
